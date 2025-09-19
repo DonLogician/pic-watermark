@@ -48,6 +48,9 @@ coverage.xml
 *.cover
 *.py.cover
 .hypothesis/
+
+# Ignore Trae AI IDE files
+.trae/
 .pytest_cache/
 cover/
 

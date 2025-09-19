@@ -37,12 +37,15 @@ def create_output_directory(input_dir):
     return output_dir
 
 
-def process_directory(input_dir):
+def process_directory(input_dir, position=None, font_size=None, color=None):
     """
     处理目录中的所有支持的图片文件
     
     Args:
         input_dir: 输入目录路径
+        position: 水印位置
+        font_size: 字体大小
+        color: 水印颜色
         
     Returns:
         int: 成功处理的文件数量
@@ -71,8 +74,8 @@ def process_directory(input_dir):
             if not check_supported_format(file_path):
                 continue
             
-            # 处理单个文件
-            if process_single_file(file_path, output_dir, input_dir):
+            # 处理单个文件，传递自定义参数
+            if process_single_file(file_path, output_dir, input_dir, position, font_size, color):
                 success_count += 1
     except Exception as e:
         print(f"遍历目录文件时出错: {e}")
@@ -80,7 +83,7 @@ def process_directory(input_dir):
     return success_count
 
 
-def process_single_file(file_path, output_dir, input_dir):
+def process_single_file(file_path, output_dir, input_dir, position=None, font_size=None, color=None):
     """
     处理单个图片文件
     
@@ -88,6 +91,9 @@ def process_single_file(file_path, output_dir, input_dir):
         file_path: 输入文件路径
         output_dir: 输出目录路径
         input_dir: 输入目录路径
+        position: 水印位置
+        font_size: 字体大小
+        color: 水印颜色
         
     Returns:
         bool: 是否成功处理
@@ -118,8 +124,8 @@ def process_single_file(file_path, output_dir, input_dir):
         output_file_name = f"{base_name}_watermark{extension}"
         output_file = os.path.join(output_dir, output_file_name)
         
-        # 添加水印
-        return add_watermark_to_image(file_path, photo_date, output_file)
+        # 添加水印，传递自定义参数
+        return add_watermark_to_image(file_path, photo_date, output_file, position, font_size, color)
     except Exception as e:
         print(f"处理文件 '{file_path}' 时出错: {e}")
         return False

@@ -5,6 +5,7 @@
 """
 import os
 import sys
+import argparse
 from watermark_tools import (
     get_image_exif_data,
     get_photo_datetime,
@@ -21,7 +22,11 @@ def show_usage():
     显示程序使用方式
     """
     print("图片水印工具使用方式:")
-    print(f"  python {os.path.basename(sys.argv[0])} <文件或目录路径>")
+    print(f"  python {os.path.basename(sys.argv[0])} <文件或目录路径> [-p position] [-s font_size] [-c color]")
+    print("\n可选参数:")
+    print("  -p position    设置水印位置: top-left(默认), center, bottom-right")
+    print("  -s font_size   设置水印字体大小(默认: 24)")
+    print("  -c color       设置水印颜色，如 red 或 #FF0000(默认: 白色)")
     print("\n功能说明:")
     print("  - 如果提供单个图片文件路径，将为该图片添加水印并保存")
     print("  - 如果提供目录路径，将批量处理目录中的所有支持的图片文件")
@@ -29,12 +34,15 @@ def show_usage():
     print("  - 处理后的图片将保存到与原目录同名的'原目录名_watermark'文件夹中")
 
 
-def process_single_file(input_file):
+def process_single_file(input_file, position=None, font_size=None, color=None):
     """
     处理单个图片文件
     
     Args:
         input_file: 输入文件路径
+        position: 水印位置
+        font_size: 字体大小
+        color: 水印颜色
     """
     # 检查文件是否存在
     if not check_file_exists(input_file):
@@ -78,22 +86,32 @@ def process_single_file(input_file):
     output_file_name = f"{base_name}_watermark{extension}"
     output_file = os.path.join(output_dir, output_file_name)
     
-    # 添加水印
-    return add_watermark_to_image(input_file, photo_date, output_file)
+    # 添加水印，传递自定义参数
+    return add_watermark_to_image(input_file, photo_date, output_file, position, font_size, color)
 
 
 def main():
     """
     主函数 - 程序入口点
     """
-    # 检查命令行参数
-    if len(sys.argv) < 2:
-        show_usage()
-        return
+    # 创建命令行参数解析器
+    parser = argparse.ArgumentParser(description='图片水印工具')
+    parser.add_argument('input_path', help='输入文件或目录路径')
+    parser.add_argument('-p', '--position', choices=['top-left', 'center', 'bottom-right'], 
+                        default='top-left', help='水印位置 (默认: top-left)')
+    parser.add_argument('-s', '--font_size', type=int, default=24, help='字体大小 (默认: 24)')
+    parser.add_argument('-c', '--color', default='white', help='水印颜色 (默认: white)')
     
-    input_path = sys.argv[1]
+    # 解析命令行参数
+    args = parser.parse_args()
     
-    # 检查路径是否存在
+    # 获取输入路径和自定义参数
+    input_path = args.input_path
+    position = args.position
+    font_size = args.font_size
+    color = args.color
+    
+    # 检查输入路径是否存在
     if not os.path.exists(input_path):
         print(f"错误: 路径 '{input_path}' 不存在")
         return
@@ -101,10 +119,10 @@ def main():
     # 判断是文件还是目录
     if os.path.isfile(input_path):
         # 处理单个文件
-        process_single_file(input_path)
+        process_single_file(input_path, position, font_size, color)
     else:
         # 处理目录中的所有文件
-        success_count = process_directory(input_path)
+        success_count = process_directory(input_path, position, font_size, color)
         print(f"批量处理完成，成功处理了 {success_count} 个文件")
 
 
