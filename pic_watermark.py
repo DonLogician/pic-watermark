@@ -99,7 +99,7 @@ def main():
     parser.add_argument('input_path', help='输入文件或目录路径')
     parser.add_argument('-p', '--position', choices=['top-left', 'center', 'bottom-right'], 
                         default='top-left', help='水印位置 (默认: top-left)')
-    parser.add_argument('-s', '--font_size', type=int, default=24, help='字体大小 (默认: 24)')
+    parser.add_argument('-s', '--font-size', type=int, default=24, help='字体大小 (默认: 24)')
     parser.add_argument('-c', '--color', default='white', help='水印颜色 (默认: white)')
     
     # 解析命令行参数
