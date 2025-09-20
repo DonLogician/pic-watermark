@@ -6,7 +6,7 @@
 import os
 import sys
 import argparse
-from watermark_tools import (
+from src.watermark_tools import (
     get_image_exif_data,
     get_photo_datetime,
     add_watermark_to_image,
