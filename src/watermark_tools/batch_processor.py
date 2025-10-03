@@ -1,5 +1,7 @@
 # 批量导出图片列表
-def batch_export_images(image_paths, position=None, font_size=None, color=None):
+def batch_export_images(
+    image_paths, position=None, font_size=None, color=None, output_format="JPEG"
+):
     if not image_paths:
         print("未选择图片")
         return 0
@@ -12,7 +14,13 @@ def batch_export_images(image_paths, position=None, font_size=None, color=None):
     for file_path in image_paths:
         if check_supported_format(file_path):
             if process_single_file(
-                file_path, output_dir, first_dir, position, font_size, color
+                file_path,
+                output_dir,
+                first_dir,
+                position,
+                font_size,
+                color,
+                output_format,
             ):
                 success_count += 1
     print(f"批量导出完成，成功处理了 {success_count} 个文件，输出目录: {output_dir}")
@@ -105,7 +113,13 @@ def process_directory(input_dir, position=None, font_size=None, color=None):
 
             # 处理单个文件，传递自定义参数
             if process_single_file(
-                file_path, output_dir, input_dir, position, font_size, color
+                file_path,
+                output_dir,
+                input_dir,
+                position,
+                font_size,
+                color,
+                output_format="JPEG",
             ):
                 success_count += 1
     except Exception as e:
@@ -115,7 +129,13 @@ def process_directory(input_dir, position=None, font_size=None, color=None):
 
 
 def process_single_file(
-    file_path, output_dir, input_dir, position=None, font_size=None, color=None
+    file_path,
+    output_dir,
+    input_dir,
+    position=None,
+    font_size=None,
+    color=None,
+    output_format="JPEG",
 ):
     """
     处理单个图片文件
@@ -154,10 +174,12 @@ def process_single_file(
 
             photo_date = datetime.now().strftime("%Y-%m-%d")
 
-        # 构建输出文件路径 - 在文件名后添加_watermark后缀
+        # 构建输出文件路径 - 在文件名后添加_watermark后缀，并根据output_format修改扩展名
         file_name = os.path.basename(file_path)
         base_name, extension = os.path.splitext(file_name)
-        output_file_name = f"{base_name}_watermark{extension}"
+        ext_map = {"JPEG": ".jpg", "PNG": ".png"}
+        out_ext = ext_map.get(output_format.upper(), extension)
+        output_file_name = f"{base_name}_watermark{out_ext}"
         output_file = os.path.join(output_dir, output_file_name)
 
         # 添加水印，传递自定义参数

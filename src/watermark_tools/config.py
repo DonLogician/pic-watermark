@@ -1,7 +1,7 @@
 # 配置常量
 
 # 支持的图片格式
-SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png']
+SUPPORTED_FORMATS = [".jpg", ".jpeg", ".png", ".bmp", ".tiff"]
 
 # 默认字体大小
 DEFAULT_FONT_SIZE = 24

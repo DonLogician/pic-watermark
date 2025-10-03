@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import (
     QListWidgetItem,
     QFrame,
     QSizePolicy,
+    QComboBox,
 )
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import QSize, Qt
@@ -23,7 +24,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("图片水印工具")
         self.resize(1200, 900)
-        from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QSizePolicy
+        # 移除多余的PyQt5控件导入，全部在文件顶部统一导入
 
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
@@ -78,7 +79,15 @@ class MainWindow(QMainWindow):
         sidebar_right.setFrameShape(QFrame.StyledPanel)
         sidebar_right.setFixedWidth(300)
         sidebar_right_layout = QVBoxLayout(sidebar_right)
-        sidebar_right_layout.addSpacing(80)  # 顶部留出空间，底部往上抬
+        # 输出格式选择
+        format_label = QLabel("输出格式：")
+        format_label.setStyleSheet("font-size:16px;")
+        sidebar_right_layout.addWidget(format_label)
+        self.format_combo = QComboBox()
+        self.format_combo.addItems(["JPEG", "PNG"])
+        self.format_combo.setCurrentIndex(0)
+        sidebar_right_layout.addWidget(self.format_combo)
+        sidebar_right_layout.addSpacing(40)
         sidebar_right_layout.addStretch()
         main_layout.addWidget(sidebar_right)
         # 存储已导入图片路径
@@ -133,7 +142,10 @@ class MainWindow(QMainWindow):
         if not self.image_paths:
             QMessageBox.information(self, "提示", "请先导入图片！")
             return
-        count = batch_export_images(self.image_paths)
+        # 获取用户选择的输出格式
+        format_str = self.format_combo.currentText()
+        # 传递给批量导出
+        count = batch_export_images(self.image_paths, output_format=format_str)
         if count:
             QMessageBox.information(self, "导出完成", f"成功导出 {count} 张图片。")
         else:
@@ -183,17 +195,17 @@ class MainWindow(QMainWindow):
         else:
             self.preview_label_original.setText("无法加载图片")
 
-        # 水印预览
+        # 水印预览，文件存储到tmp文件夹
         try:
-            import tempfile
             from src.watermark_tools.watermark_processor import add_watermark_to_image
 
-            watermark_text = "预览水印"  # 可根据实际需求调整
-            with tempfile.NamedTemporaryFile(
-                suffix="_preview.png", delete=False
-            ) as tmp:
-                tmp_path = tmp.name
-            # 添加水印到临时文件
+            watermark_text = "预览水印"
+            tmp_dir = os.path.join(os.getcwd(), "tmp")
+            if not os.path.exists(tmp_dir):
+                os.makedirs(tmp_dir)
+            import uuid
+
+            tmp_path = os.path.join(tmp_dir, f"preview_{uuid.uuid4().hex}.png")
             success = add_watermark_to_image(img_path, watermark_text, tmp_path)
             if success:
                 pixmap_wm = QPixmap(tmp_path)
@@ -210,6 +222,10 @@ class MainWindow(QMainWindow):
                 self.preview_label_watermarked.setText("水印生成失败")
         except Exception as e:
             self.preview_label_watermarked.setText(f"水印预览出错: {e}")
+
+    def closeEvent(self, event):
+        clear_tmp_folder()
+        super().closeEvent(event)
 
 
 # 拖拽支持的自定义QListWidget
@@ -246,8 +262,11 @@ class DraggableListWidget(QListWidget):
             event.ignore()
 
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec_())
+def clear_tmp_folder():
+    tmp_dir = os.path.join(os.getcwd(), "tmp")
+    if os.path.exists(tmp_dir):
+        import shutil
+        try:
+            shutil.rmtree(tmp_dir)
+        except Exception:
+            pass

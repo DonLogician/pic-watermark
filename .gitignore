@@ -230,3 +230,7 @@ __marimo__/
 *.rw2
 *.pef
 *.raf
+
+# tmp files
+tmp/
+temp/
