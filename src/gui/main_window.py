@@ -14,13 +14,48 @@ from PyQt5.QtWidgets import (
     QFrame,
     QSizePolicy,
     QComboBox,
+    QLineEdit,
 )
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import QSize, Qt
 
 
 class MainWindow(QMainWindow):
+    def _move_export_btn(self):
+        # 将导出按钮定位到主窗口右下角，保持20px边距
+        btn_w = self.export_btn.width()
+        btn_h = self.export_btn.height()
+        win_w = self.width()
+        win_h = self.height()
+        margin = 20
+        x = win_w - btn_w - margin
+        y = win_h - btn_h - margin
+        self.export_btn.move(x, y)
+
+    def select_images(self):
+        files, _ = QFileDialog.getOpenFileNames(
+            self, "选择图片", "", "图片文件 (*.jpg *.jpeg *.png *.bmp *.tiff)"
+        )
+        if files:
+            self.list_widget.clear()
+            self.image_paths = []
+            self.add_images(files)
+
+    def select_folder(self):
+        folder = QFileDialog.getExistingDirectory(self, "选择文件夹", "")
+        if folder:
+            exts = (".jpg", ".jpeg", ".png", ".bmp", ".tiff")
+            files = [
+                os.path.join(folder, f)
+                for f in os.listdir(folder)
+                if f.lower().endswith(exts)
+            ]
+            self.list_widget.clear()
+            self.image_paths = []
+            self.add_images(files)
+
     def __init__(self):
+        self.image_paths = []
         super().__init__()
         self.setWindowTitle("图片水印工具")
         self.resize(1200, 900)
@@ -74,24 +109,16 @@ class MainWindow(QMainWindow):
         preview_layout.addWidget(self.preview_label_watermarked)
         main_layout.addWidget(preview_frame)
 
-        # 右侧 sidebar（功能区预留）
-        sidebar_right = QFrame()
-        sidebar_right.setFrameShape(QFrame.StyledPanel)
-        sidebar_right.setFixedWidth(300)
-        sidebar_right_layout = QVBoxLayout(sidebar_right)
-        # 输出格式选择
-        format_label = QLabel("输出格式：")
-        format_label.setStyleSheet("font-size:16px;")
-        sidebar_right_layout.addWidget(format_label)
-        self.format_combo = QComboBox()
-        self.format_combo.addItems(["JPEG", "PNG"])
-        self.format_combo.setCurrentIndex(0)
-        sidebar_right_layout.addWidget(self.format_combo)
-        sidebar_right_layout.addSpacing(40)
-        sidebar_right_layout.addStretch()
-        main_layout.addWidget(sidebar_right)
-        # 存储已导入图片路径
-        self.image_paths = []
+        # 右侧 sidebar（导出设置入口）
+        self.sidebar_right = QFrame()
+        self.sidebar_right.setFrameShape(QFrame.StyledPanel)
+        self.sidebar_right.setFixedWidth(300)
+        self.sidebar_right_layout = QVBoxLayout(self.sidebar_right)
+        self.btn_export_settings = QPushButton("导出设置")
+        self.btn_export_settings.setStyleSheet("font-size:16px;")
+        self.btn_export_settings.clicked.connect(self.show_export_settings_sidebar)
+        self.sidebar_right_layout.addSpacing(40)
+        self.sidebar_right_layout.addWidget(self.btn_export_settings)
         # 导出按钮，主窗口右下角
         self.export_btn = QPushButton("导出", self)
         self.export_btn.setFixedSize(120, 40)
@@ -99,36 +126,84 @@ class MainWindow(QMainWindow):
         self.export_btn.clicked.connect(self.export_images)
         self.export_btn.show()
         self._move_export_btn()
+        self.sidebar_right_layout.addStretch()
+        main_layout.addWidget(self.sidebar_right)
 
-    def _move_export_btn(self):
-        # 按钮始终在主窗口右下角
-        margin_x, margin_y = 20, 20
-        self.export_btn.move(
-            self.width() - self.export_btn.width() - margin_x,
-            self.height() - self.export_btn.height() - margin_y,
-        )
+        # 新sidebar（导出设置界面）
+        self.sidebar_export_settings = QFrame()
+        self.sidebar_export_settings.setFrameShape(QFrame.StyledPanel)
+        self.sidebar_export_settings.setFixedWidth(300)
+        self.sidebar_export_settings_layout = QVBoxLayout(self.sidebar_export_settings)
+        # 返回按钮
+        self.btn_back = QPushButton("返回")
+        self.btn_back.setStyleSheet("font-size:16px;")
+        self.btn_back.clicked.connect(self.show_main_sidebar)
+        self.sidebar_export_settings_layout.addWidget(self.btn_back)
+        self.sidebar_export_settings_layout.addSpacing(20)
+        # 导出格式选择
+        export_format_label = QLabel("导出格式：")
+        export_format_label.setStyleSheet("font-size:16px;")
+        self.sidebar_export_settings_layout.addWidget(export_format_label)
+        self.format_combo = QComboBox()
+        self.format_combo.addItems(["JPEG", "PNG"])
+        self.format_combo.setCurrentIndex(0)
+        self.sidebar_export_settings_layout.addWidget(self.format_combo)
+        # 导出路径选择
+        export_path_label = QLabel("导出路径：")
+        export_path_label.setStyleSheet("font-size:16px;")
+        self.sidebar_export_settings_layout.addWidget(export_path_label)
+        path_layout = QHBoxLayout()
+        self.export_path_edit = QLineEdit()
+        self.export_path_edit.setPlaceholderText("请选择导出文件夹")
+        self.export_path_edit.setReadOnly(True)
+        path_layout.addWidget(self.export_path_edit)
+        self.btn_select_export_path = QPushButton("选择")
+        self.btn_select_export_path.setFixedWidth(60)
+        self.btn_select_export_path.clicked.connect(self.select_export_path)
+        path_layout.addWidget(self.btn_select_export_path)
+        self.sidebar_export_settings_layout.addLayout(path_layout)
+        self.export_path = ""
+        self.sidebar_export_settings_layout.addSpacing(40)
+        self.sidebar_export_settings_layout.addStretch()
+        self.sidebar_export_settings.hide()
+        main_layout.addWidget(self.sidebar_export_settings)
 
-    def select_images(self):
-        files, _ = QFileDialog.getOpenFileNames(
-            self, "选择图片", "", "图片文件 (*.jpg *.jpeg *.png *.bmp *.tiff)"
-        )
-        if files:
-            self.list_widget.clear()
-            self.image_paths = []
-            self.add_images(files)
-
-    def select_folder(self):
-        folder = QFileDialog.getExistingDirectory(self, "选择文件夹", "")
+    def select_export_path(self):
+        folder = QFileDialog.getExistingDirectory(self, "选择导出文件夹", "")
         if folder:
-            exts = (".jpg", ".jpeg", ".png", ".bmp", ".tiff")
-            files = [
-                os.path.join(folder, f)
-                for f in os.listdir(folder)
-                if f.lower().endswith(exts)
-            ]
-            self.list_widget.clear()
-            self.image_paths = []
-            self.add_images(files)
+            self.export_path_edit.setText(folder)
+            self.export_path = folder
+            self.check_export_path_conflict()
+
+    def check_export_path_conflict(self):
+        # 检查导出路径是否与图片所在文件夹冲突
+        if (
+            not self.export_path
+            or not hasattr(self, "image_paths")
+            or not self.image_paths
+        ):
+            return
+        from PyQt5.QtWidgets import QMessageBox
+
+        img_dirs = set(os.path.dirname(p) for p in self.image_paths)
+        if self.export_path in img_dirs:
+            QMessageBox.warning(
+                self,
+                "导出路径冲突",
+                "导出路径不能与原图所在文件夹相同，否则可能覆盖原图！",
+            )
+
+    def show_export_settings_sidebar(self):
+        # 切换到导出设置sidebar
+        self.sidebar_right.hide()
+        self.sidebar_export_settings.show()
+
+    def show_main_sidebar(self):
+        # 返回主sidebar
+        self.sidebar_export_settings.hide()
+        self.sidebar_right.show()
+
+    # ...existing code...
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -142,10 +217,23 @@ class MainWindow(QMainWindow):
         if not self.image_paths:
             QMessageBox.information(self, "提示", "请先导入图片！")
             return
+        if not self.export_path:
+            QMessageBox.warning(self, "导出路径未设置", "请先选择导出文件夹！")
+            return
+        img_dirs = set(os.path.dirname(p) for p in self.image_paths)
+        if self.export_path in img_dirs:
+            QMessageBox.warning(
+                self,
+                "导出路径冲突",
+                "导出路径不能与原图所在文件夹相同，否则可能覆盖原图！",
+            )
+            return
         # 获取用户选择的输出格式
         format_str = self.format_combo.currentText()
         # 传递给批量导出
-        count = batch_export_images(self.image_paths, output_format=format_str)
+        count = batch_export_images(
+            self.image_paths, output_format=format_str, output_dir=self.export_path
+        )
         if count:
             QMessageBox.information(self, "导出完成", f"成功导出 {count} 张图片。")
         else:
@@ -168,6 +256,7 @@ class MainWindow(QMainWindow):
                     )
                     item.setIcon(icon)
                 self.list_widget.addItem(item)
+        self.check_export_path_conflict()
 
     def add_images_dialog(self):
         files, _ = QFileDialog.getOpenFileNames(

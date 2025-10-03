@@ -1,22 +1,30 @@
 # 批量导出图片列表
 def batch_export_images(
-    image_paths, position=None, font_size=None, color=None, output_format="JPEG"
+    image_paths,
+    position=None,
+    font_size=None,
+    color=None,
+    output_format="JPEG",
+    output_dir=None,
 ):
     if not image_paths:
         print("未选择图片")
         return 0
-    # 以首张图片所在目录为输出目录基准
-    first_dir = os.path.dirname(image_paths[0]) if image_paths else os.getcwd()
-    output_dir = create_output_directory(first_dir)
-    if not output_dir:
-        return 0
+    # 如果用户指定了导出目录，则使用，否则保持原有逻辑
+    if output_dir:
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+    else:
+        first_dir = os.path.dirname(image_paths[0]) if image_paths else os.getcwd()
+        output_dir = create_output_directory(first_dir)
+        if not output_dir:
+            return 0
     success_count = 0
     for file_path in image_paths:
         if check_supported_format(file_path):
             if process_single_file(
                 file_path,
                 output_dir,
-                first_dir,
                 position,
                 font_size,
                 color,
@@ -131,7 +139,6 @@ def process_directory(input_dir, position=None, font_size=None, color=None):
 def process_single_file(
     file_path,
     output_dir,
-    input_dir,
     position=None,
     font_size=None,
     color=None,
@@ -143,7 +150,6 @@ def process_single_file(
     Args:
         file_path: 输入文件路径
         output_dir: 输出目录路径
-        input_dir: 输入目录路径
         position: 水印位置
         font_size: 字体大小
         color: 水印颜色
