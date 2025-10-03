@@ -266,6 +266,7 @@ def clear_tmp_folder():
     tmp_dir = os.path.join(os.getcwd(), "tmp")
     if os.path.exists(tmp_dir):
         import shutil
+
         try:
             shutil.rmtree(tmp_dir)
         except Exception:
