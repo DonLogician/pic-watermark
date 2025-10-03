@@ -6,6 +6,9 @@ def batch_export_images(
     color=None,
     output_format="JPEG",
     output_dir=None,
+    naming_rule=0,
+    prefix="",
+    suffix="",
 ):
     if not image_paths:
         print("未选择图片")
@@ -22,9 +25,21 @@ def batch_export_images(
     success_count = 0
     for file_path in image_paths:
         if check_supported_format(file_path):
+            # 生成自定义文件名
+            file_name = os.path.basename(file_path)
+            base_name, extension = os.path.splitext(file_name)
+            ext_map = {"JPEG": ".jpg", "PNG": ".png"}
+            out_ext = ext_map.get(output_format.upper(), extension)
+            if naming_rule == 1 and prefix:
+                output_file_name = f"{prefix}{base_name}{out_ext}"
+            elif naming_rule == 2 and suffix:
+                output_file_name = f"{base_name}{suffix}{out_ext}"
+            else:
+                output_file_name = f"{base_name}{out_ext}"
+            output_file = os.path.join(output_dir, output_file_name)
             if process_single_file(
                 file_path,
-                output_dir,
+                output_file,
                 position,
                 font_size,
                 color,
@@ -138,7 +153,7 @@ def process_directory(input_dir, position=None, font_size=None, color=None):
 
 def process_single_file(
     file_path,
-    output_dir,
+    output_file,
     position=None,
     font_size=None,
     color=None,
@@ -149,7 +164,7 @@ def process_single_file(
 
     Args:
         file_path: 输入文件路径
-        output_dir: 输出目录路径
+        output_file: 输出文件完整路径
         position: 水印位置
         font_size: 字体大小
         color: 水印颜色
@@ -179,14 +194,6 @@ def process_single_file(
             from datetime import datetime
 
             photo_date = datetime.now().strftime("%Y-%m-%d")
-
-        # 构建输出文件路径 - 在文件名后添加_watermark后缀，并根据output_format修改扩展名
-        file_name = os.path.basename(file_path)
-        base_name, extension = os.path.splitext(file_name)
-        ext_map = {"JPEG": ".jpg", "PNG": ".png"}
-        out_ext = ext_map.get(output_format.upper(), extension)
-        output_file_name = f"{base_name}_watermark{out_ext}"
-        output_file = os.path.join(output_dir, output_file_name)
 
         # 添加水印，传递自定义参数
         return add_watermark_to_image(

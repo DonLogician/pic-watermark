@@ -148,6 +148,25 @@ class MainWindow(QMainWindow):
         self.format_combo.addItems(["JPEG", "PNG"])
         self.format_combo.setCurrentIndex(0)
         self.sidebar_export_settings_layout.addWidget(self.format_combo)
+
+        # 命名规则选择
+        naming_rule_label = QLabel("命名规则：")
+        naming_rule_label.setStyleSheet("font-size:16px;")
+        self.sidebar_export_settings_layout.addWidget(naming_rule_label)
+        self.naming_rule_combo = QComboBox()
+        self.naming_rule_combo.addItems(["保留原文件名", "添加前缀", "添加后缀"])
+        self.naming_rule_combo.setCurrentIndex(0)
+        self.sidebar_export_settings_layout.addWidget(self.naming_rule_combo)
+        self.naming_prefix_edit = QLineEdit()
+        self.naming_prefix_edit.setPlaceholderText("自定义前缀")
+        self.naming_suffix_edit = QLineEdit()
+        self.naming_suffix_edit.setPlaceholderText("自定义后缀")
+        self.sidebar_export_settings_layout.addWidget(self.naming_prefix_edit)
+        self.sidebar_export_settings_layout.addWidget(self.naming_suffix_edit)
+        self.naming_prefix_edit.hide()
+        self.naming_suffix_edit.hide()
+        self.naming_rule_combo.currentIndexChanged.connect(self._on_naming_rule_changed)
+
         # 导出路径选择
         export_path_label = QLabel("导出路径：")
         export_path_label.setStyleSheet("font-size:16px;")
@@ -167,6 +186,18 @@ class MainWindow(QMainWindow):
         self.sidebar_export_settings_layout.addStretch()
         self.sidebar_export_settings.hide()
         main_layout.addWidget(self.sidebar_export_settings)
+
+    def _on_naming_rule_changed(self, idx):
+        # 根据选择显示/隐藏前缀或后缀输入框
+        if idx == 1:
+            self.naming_prefix_edit.show()
+            self.naming_suffix_edit.hide()
+        elif idx == 2:
+            self.naming_prefix_edit.hide()
+            self.naming_suffix_edit.show()
+        else:
+            self.naming_prefix_edit.hide()
+            self.naming_suffix_edit.hide()
 
     def select_export_path(self):
         folder = QFileDialog.getExistingDirectory(self, "选择导出文件夹", "")
@@ -230,9 +261,18 @@ class MainWindow(QMainWindow):
             return
         # 获取用户选择的输出格式
         format_str = self.format_combo.currentText()
+        # 获取命名规则
+        naming_rule = self.naming_rule_combo.currentIndex()
+        prefix = self.naming_prefix_edit.text() if naming_rule == 1 else ""
+        suffix = self.naming_suffix_edit.text() if naming_rule == 2 else ""
         # 传递给批量导出
         count = batch_export_images(
-            self.image_paths, output_format=format_str, output_dir=self.export_path
+            self.image_paths,
+            output_format=format_str,
+            output_dir=self.export_path,
+            naming_rule=naming_rule,
+            prefix=prefix,
+            suffix=suffix,
         )
         if count:
             QMessageBox.information(self, "导出完成", f"成功导出 {count} 张图片。")
