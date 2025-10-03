@@ -4,7 +4,7 @@
 SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png']
 
 # 默认字体大小
-DEFAULT_FONT_SIZE = 14
+DEFAULT_FONT_SIZE = 24
 
 # 默认水印位置
 DEFAULT_WATERMARK_POSITION = (10, 10)
