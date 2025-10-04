@@ -54,6 +54,12 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# Ignore copilot AI prompt files
+.github
+
+# Ignore vscode settings
+.vscode/
+
 # Translations
 *.mo
 *.pot

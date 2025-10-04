@@ -6,9 +6,9 @@ def batch_export_images(
     color=None,
     output_format="JPEG",
     output_dir=None,
-    naming_rule=0,
     prefix="",
     suffix="",
+    naming_rule=0
 ):
     if not image_paths:
         print("未选择图片")
@@ -28,7 +28,7 @@ def batch_export_images(
             # 生成自定义文件名
             file_name = os.path.basename(file_path)
             base_name, extension = os.path.splitext(file_name)
-            ext_map = {"JPEG": ".jpg", "PNG": ".png"}
+            ext_map = {"JPEG": ".jpeg", "PNG": ".png"}
             out_ext = ext_map.get(output_format.upper(), extension)
             if naming_rule == 1 and prefix:
                 output_file_name = f"{prefix}{base_name}{out_ext}"
