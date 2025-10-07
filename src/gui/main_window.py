@@ -104,20 +104,19 @@ class MainWindow(QMainWindow):
         main_layout = QHBoxLayout(main_widget)
 
         # 左侧 sidebar
-        self.main_sidebar = MainSidebar(self)
-        # 替换list_widget为DraggableListWidget
-        self.main_sidebar.list_widget.setParent(None)
+        self.sidebar_main = MainSidebar(self)
+        self.sidebar_main.list_widget.setParent(None)
         self.list_widget = DraggableListWidget(self)
         self.list_widget.setIconSize(QSize(128, 128))
         self.list_widget.setMinimumHeight(400)
-        self.main_sidebar.layout().insertWidget(3, self.list_widget)
-        self.main_sidebar.list_widget = self.list_widget
-        main_layout.addWidget(self.main_sidebar)
+        self.sidebar_main.layout().insertWidget(3, self.list_widget)
+        self.sidebar_main.list_widget = self.list_widget
+        main_layout.addWidget(self.sidebar_main)
 
         # 信号连接
-        self.main_sidebar.btn_select_images.clicked.connect(self.select_images)
-        self.main_sidebar.btn_add_images.clicked.connect(self.add_images_dialog)
-        self.main_sidebar.btn_select_folder.clicked.connect(self.select_folder)
+        self.sidebar_main.btn_select_images.clicked.connect(self.select_images)
+        self.sidebar_main.btn_add_images.clicked.connect(self.add_images_dialog)
+        self.sidebar_main.btn_select_folder.clicked.connect(self.select_folder)
         self.list_widget.itemSelectionChanged.connect(self.show_preview)
 
         # 中间预览区（上下两部分）
@@ -150,7 +149,6 @@ class MainWindow(QMainWindow):
         sidebar_right_layout = QVBoxLayout(self.sidebar_right)
         self.btn_export_settings = QPushButton("导出设置")
         self.btn_export_settings.setStyleSheet("font-size:16px;")
-        self.btn_export_settings.clicked.connect(self.show_export_settings_sidebar)
         sidebar_right_layout.addWidget(self.btn_export_settings)
         self.btn_watermark_settings = QPushButton("水印设置")
         self.btn_watermark_settings.setStyleSheet("font-size:16px;")
@@ -159,11 +157,20 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.sidebar_right)
 
         # 导出设置sidebar（初始隐藏）
-        self.export_settings_sidebar = ExportSettingsSidebar(self)
-        self.export_settings_sidebar.hide()
-        main_layout.addWidget(self.export_settings_sidebar)
-        # 绑定导出设置sidebar的返回按钮
-        self.export_settings_sidebar.btn_back.clicked.connect(self.show_main_sidebar)
+        self.sidebar_export_settings = ExportSettingsSidebar(self)
+        self.sidebar_export_settings.hide()
+        main_layout.addWidget(self.sidebar_export_settings)
+        self.btn_export_settings.clicked.connect(self.show_export_settings_sidebar)
+        self.sidebar_export_settings.btn_back.clicked.connect(self.show_main_sidebar)
+
+        # 水印设置sidebar（初始隐藏）
+        self.sidebar_watermark_settings = WatermarkSettingsSidebar(self)
+        self.sidebar_watermark_settings.hide()
+        main_layout.addWidget(self.sidebar_watermark_settings)
+        self.btn_watermark_settings.clicked.connect(
+            self.show_watermark_settings_sidebar
+        )
+        self.sidebar_watermark_settings.btn_back.clicked.connect(self.show_main_sidebar)
 
         # 导出按钮，主窗口右下角始终显示
         self.export_btn = QPushButton("导出", self)
@@ -174,7 +181,7 @@ class MainWindow(QMainWindow):
         self._move_export_btn()
 
         # 连接导出设置信号
-        self.export_settings_sidebar.export_settings_changed.connect(
+        self.sidebar_export_settings.export_settings_changed.connect(
             self.handle_export_settings_change
         )
 
@@ -196,7 +203,7 @@ class MainWindow(QMainWindow):
                         "导出路径不能与原图所在文件夹相同，否则可能覆盖原图！",
                     )
                     # 清空冲突路径
-                    self.export_settings_sidebar.export_path_edit.clear()
+                    self.sidebar_export_settings.export_path_edit.clear()
                     self.export_path = ""
                 else:
                     self.export_path = export_path
@@ -206,16 +213,11 @@ class MainWindow(QMainWindow):
         self.export_prefix = prefix
         self.export_suffix = suffix
         self.export_naming_rule = (
-            self.export_settings_sidebar.naming_rule_combo.currentIndex()
+            self.sidebar_export_settings.naming_rule_combo.currentIndex()
         )
         print(
             f"导出设置更新: 格式={format}, 前缀={prefix}, 后缀={suffix}, 路径={export_path}"
         )
-
-    def show_watermark_settings_sidebar(self):
-        # 切换到水印设置sidebar
-        self.sidebar_right.hide()
-        self.sidebar_watermark_settings.show()
 
     def select_export_path(self):
         folder = QFileDialog.getExistingDirectory(self, "选择导出文件夹", "")
@@ -251,12 +253,17 @@ class MainWindow(QMainWindow):
     def show_export_settings_sidebar(self):
         # 切换到导出设置sidebar
         self.sidebar_right.hide()
-        self.export_settings_sidebar.show()
+        self.sidebar_export_settings.show()
+
+    def show_watermark_settings_sidebar(self):
+        # 切换到水印设置sidebar
+        self.sidebar_right.hide()
+        self.sidebar_watermark_settings.show()
 
     def show_main_sidebar(self):
         # 返回主sidebar
-        self.export_settings_sidebar.hide()
-        # self.watermark_settings_sidebar.hide()
+        self.sidebar_export_settings.hide()
+        self.sidebar_watermark_settings.hide()
         self.sidebar_right.show()
 
     # ...existing code...
@@ -278,7 +285,9 @@ class MainWindow(QMainWindow):
             return
 
         img_dirs = set(os.path.dirname(p) for p in self.image_paths)
-        if self.export_path in img_dirs and not (self.export_prefix or self.export_suffix):
+        if self.export_path in img_dirs and not (
+            self.export_prefix or self.export_suffix
+        ):
             QMessageBox.warning(self, "警告", "导出路径不能与图片所在文件夹相同！")
             return
 
@@ -288,7 +297,7 @@ class MainWindow(QMainWindow):
             output_dir=self.export_path,
             prefix=self.export_prefix,
             suffix=self.export_suffix,
-            naming_rule=self.export_naming_rule
+            naming_rule=self.export_naming_rule,
         )
         if count:
             QMessageBox.information(self, "成功", f"成功导出 {count} 张图片！")
