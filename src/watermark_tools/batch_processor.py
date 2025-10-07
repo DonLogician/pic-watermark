@@ -4,6 +4,8 @@ def batch_export_images(
     position=None,
     font_size=None,
     color=None,
+    watermark_text=None,
+    opacity=None,
     output_format="JPEG",
     output_dir=None,
     prefix="",
@@ -44,6 +46,8 @@ def batch_export_images(
                 font_size,
                 color,
                 output_format,
+                watermark_text=watermark_text,
+                opacity=opacity
             ):
                 success_count += 1
     print(f"批量导出完成，成功处理了 {success_count} 个文件，输出目录: {output_dir}")
@@ -158,6 +162,8 @@ def process_single_file(
     font_size=None,
     color=None,
     output_format="JPEG",
+    watermark_text=None,
+    opacity=None
 ):
     """
     处理单个图片文件
@@ -195,9 +201,21 @@ def process_single_file(
 
             photo_date = datetime.now().strftime("%Y-%m-%d")
 
-        # 添加水印，传递自定义参数
+        # 如果提供了自定义水印文本，则使用它，否则使用日期
+        final_watermark_text = watermark_text if watermark_text else photo_date
+        
+        # 添加水印，传递所有自定义参数
+        # 将output_format转换为小写的扩展名格式
+        extension = output_format.lower() if output_format else None
         return add_watermark_to_image(
-            file_path, photo_date, output_file, position, font_size, color
+            file_path, 
+            final_watermark_text, 
+            output_file, 
+            position, 
+            font_size, 
+            color,
+            transparency=opacity,
+            extension=extension
         )
     except Exception as e:
         print(f"处理文件 '{file_path}' 时出错: {e}")

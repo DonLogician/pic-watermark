@@ -167,9 +167,7 @@ class MainWindow(QMainWindow):
         self.sidebar_watermark_settings = WatermarkSettingsSidebar(self)
         self.sidebar_watermark_settings.hide()
         main_layout.addWidget(self.sidebar_watermark_settings)
-        self.btn_watermark_settings.clicked.connect(
-            self.show_watermark_settings_sidebar
-        )
+        self.btn_watermark_settings.clicked.connect(self.show_watermark_settings_sidebar)
         self.sidebar_watermark_settings.btn_back.clicked.connect(self.show_main_sidebar)
 
         # 导出按钮，主窗口右下角始终显示
@@ -183,6 +181,10 @@ class MainWindow(QMainWindow):
         # 连接导出设置信号
         self.sidebar_export_settings.export_settings_changed.connect(
             self.handle_export_settings_change
+        )
+        # 连接水印设置信号
+        self.sidebar_watermark_settings.watermark_settings_changed.connect(
+            self.handle_watermark_settings_change
         )
 
     def handle_export_settings_change(self, format, prefix, suffix, export_path):
@@ -218,6 +220,13 @@ class MainWindow(QMainWindow):
         print(
             f"导出设置更新: 格式={format}, 前缀={prefix}, 后缀={suffix}, 路径={export_path}"
         )
+
+    def handle_watermark_settings_change(self, text, opacity, color):
+        # 处理水印设置的变化
+        self.watermark_text = text
+        self.watermark_opacity = opacity
+        self.watermark_color = color
+        print(f"水印设置更新: 内容={text}, 透明度={opacity}, 颜色={color}")
 
     def select_export_path(self):
         folder = QFileDialog.getExistingDirectory(self, "选择导出文件夹", "")
@@ -298,6 +307,9 @@ class MainWindow(QMainWindow):
             prefix=self.export_prefix,
             suffix=self.export_suffix,
             naming_rule=self.export_naming_rule,
+            watermark_text=self.watermark_text,
+            opacity=self.watermark_opacity,
+            color=self.watermark_color
         )
         if count:
             QMessageBox.information(self, "成功", f"成功导出 {count} 张图片！")
@@ -351,14 +363,22 @@ class MainWindow(QMainWindow):
         try:
             from src.watermark_tools.watermark_processor import add_watermark_to_image
 
-            watermark_text = "预览水印"
+            # watermark_text = "预览水印"
             tmp_dir = os.path.join(os.getcwd(), "tmp")
             if not os.path.exists(tmp_dir):
                 os.makedirs(tmp_dir)
             import uuid
 
             tmp_path = os.path.join(tmp_dir, f"preview_{uuid.uuid4().hex}.png")
-            success = add_watermark_to_image(img_path, watermark_text, tmp_path)
+            # 传递所有水印设置参数，包括透明度和导出格式
+            success = add_watermark_to_image(
+                img_path, 
+                self.watermark_text, 
+                tmp_path,
+                color=self.watermark_color,
+                transparency=self.watermark_opacity,
+                extension=self.export_format.lower()
+            )
             if success:
                 pixmap_wm = QPixmap(tmp_path)
                 if not pixmap_wm.isNull():
@@ -418,7 +438,6 @@ def clear_tmp_folder():
     tmp_dir = os.path.join(os.getcwd(), "tmp")
     if os.path.exists(tmp_dir):
         import shutil
-
         try:
             shutil.rmtree(tmp_dir)
         except Exception:
