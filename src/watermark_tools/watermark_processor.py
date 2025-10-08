@@ -14,7 +14,7 @@ def add_watermark_to_image(image_path, watermark_text, output_path, position=Non
         image_path: 输入图片路径
         watermark_text: 水印文本
         output_path: 输出图片路径
-        position: 水印位置，可选值: top-left, center, bottom-right
+        position: 水印位置，可选值: top-left, center, bottom-right 或 (rel_x, rel_y) 相对坐标元组
         font_size: 字体大小
         color: 水印颜色
         transparency: 水印透明度 (0-100)，100代表完全透明
@@ -77,7 +77,20 @@ def add_watermark_to_image(image_path, watermark_text, output_path, position=Non
         
         # 设置水印位置
         margin = 10  # 边距
-        if position is None or position.lower() == 'top-left':
+        if isinstance(position, tuple) and len(position) == 2 and all(isinstance(p, float) for p in position):
+            # 如果是相对坐标元组 (rel_x, rel_y)，计算实际像素位置
+            rel_x, rel_y = position
+            # 确保坐标在有效范围内 (0-1)
+            rel_x = max(0, min(1, rel_x))
+            rel_y = max(0, min(1, rel_y))
+            # 计算实际像素位置（考虑文本大小，使文本中心位于指定坐标）
+            x = int(rel_x * width - text_width / 2)
+            y = int(rel_y * height - text_height / 2)
+            # 确保位置在图片范围内
+            x = max(0, min(x, width - text_width))
+            y = max(0, min(y, height - text_height))
+            position_val = (x, y)
+        elif position is None or position.lower() == 'top-left':
             # 左上角
             position_val = (margin, margin)
         elif position.lower() == 'top-right':

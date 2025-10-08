@@ -15,6 +15,8 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QDesktopWidget
 )
+# 导入可拖拽标签类
+from .draggable_label import DraggableWatermarkLabel
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import QSize, Qt
 
@@ -153,8 +155,9 @@ class MainWindow(QMainWindow):
         preview_layout = QVBoxLayout(preview_frame)
         preview_layout.setContentsMargins(20, 20, 20, 20)  # 与左右sidebar保持距离
         
-        # 水印预览标签
-        self.preview_label_watermarked = QLabel("水印预览区")
+        # 水印预览标签 - 使用可拖拽标签类
+        self.preview_label_watermarked = DraggableWatermarkLabel(self)
+        self.preview_label_watermarked.setText("水印预览区")
         self.preview_label_watermarked.setAlignment(Qt.AlignCenter)
         
         # 在初始化时设置预览区的固定大小
@@ -272,6 +275,7 @@ class MainWindow(QMainWindow):
             "左下角": "bottom-left",
             "右下角": "bottom-right"
         }
+        # 当用户从下拉菜单选择位置时，更新为预设位置
         self.watermark_position = position_map.get(position, "center")
         print(f"水印设置更新: 内容={self.watermark_text}, 透明度={transparency}, 颜色={color}, 字号={font_size}, 位置={position}")
         # 实时更新预览
