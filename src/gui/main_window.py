@@ -360,7 +360,9 @@ class MainWindow(QMainWindow):
             naming_rule=self.export_naming_rule,
             watermark_text=self.watermark_text,
             transparency=self.watermark_transparency,
-            color=self.watermark_color
+            color=self.watermark_color,
+            position=self.watermark_position,
+            font_size=self.watermark_font_size
         )
         if count:
             QMessageBox.information(self, "成功", f"成功导出 {count} 张图片！")
