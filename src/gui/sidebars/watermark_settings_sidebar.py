@@ -7,14 +7,15 @@ from PyQt5.QtWidgets import (
     QSlider,
     QHBoxLayout,
     QColorDialog,
+    QComboBox,
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5 import QtGui
 
 
 class WatermarkSettingsSidebar(QFrame):
-    # 定义信号，传递水印内容、透明度和颜色
-    watermark_settings_changed = pyqtSignal(str, int, str)
+    # 定义信号，传递水印内容、透明度、颜色、字号和位置
+    watermark_settings_changed = pyqtSignal(str, int, str, int, str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -55,8 +56,23 @@ class WatermarkSettingsSidebar(QFrame):
 
         self.selected_color = "#FFFFFF"  # 默认颜色为白色
         self.color_picker_button.setStyleSheet(
-            f"background-color: {self.selected_color};"
-        )
+            f"background-color: {self.selected_color};")
+
+        # 添加水印字号设置
+        layout.addWidget(QLabel("水印字号："))
+        self.font_size_input = QLineEdit()
+        self.font_size_input.setFixedWidth(50)
+        self.font_size_input.setText("24")  # 初始值为24
+        self.font_size_input.setValidator(QtGui.QIntValidator(1, 1000))
+        self.font_size_input.textChanged.connect(self.emit_watermark_settings)
+        layout.addWidget(self.font_size_input)
+
+        # 添加水印位置设置
+        layout.addWidget(QLabel("水印位置："))
+        self.watermark_position_combo = QComboBox()
+        self.watermark_position_combo.addItems(["中央", "左上角", "右上角", "左下角", "右下角"])
+        self.watermark_position_combo.currentIndexChanged.connect(self.emit_watermark_settings)
+        layout.addWidget(self.watermark_position_combo)
 
         layout.addStretch()
 
@@ -82,7 +98,9 @@ class WatermarkSettingsSidebar(QFrame):
             self.emit_watermark_settings()
 
     def emit_watermark_settings(self):
-        # 发射信号，传递水印内容、透明度和颜色
+        # 发射信号，传递水印内容、透明度、颜色、字号和位置
         text = self.watermark_text_edit.text()
         transparency = int(self.watermark_transparency_input.text()) if self.watermark_transparency_input.text().isdigit() else 0
-        self.watermark_settings_changed.emit(text, transparency, self.selected_color)
+        font_size = int(self.font_size_input.text()) if self.font_size_input.text().isdigit() else 24
+        position = self.watermark_position_combo.currentText()
+        self.watermark_settings_changed.emit(text, transparency, self.selected_color, font_size, position)

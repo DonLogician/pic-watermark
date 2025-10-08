@@ -67,30 +67,31 @@ def add_watermark_to_image(image_path, watermark_text, output_path, position=Non
         if isinstance(color_val, tuple) and len(color_val) == 4:
             color_val = color_val[:3]  # 只保留RGB部分
         
+        # 创建临时draw对象来计算文本尺寸
+        temp_img = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
+        temp_draw = ImageDraw.Draw(temp_img)
+        # 获取文本尺寸 - 使用textbbox替代textsize
+        bbox = temp_draw.textbbox((0, 0), watermark_text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
         # 设置水印位置
+        margin = 10  # 边距
         if position is None or position.lower() == 'top-left':
             # 左上角
-            position_val = DEFAULT_WATERMARK_POSITION
+            position_val = (margin, margin)
+        elif position.lower() == 'top-right':
+            # 右上角
+            position_val = (width - text_width - margin, margin)
         elif position.lower() == 'center':
             # 中央位置
-            # 创建临时draw对象来计算文本尺寸
-            temp_img = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
-            temp_draw = ImageDraw.Draw(temp_img)
-            # 获取文本尺寸 - 使用textbbox替代textsize
-            bbox = temp_draw.textbbox((0, 0), watermark_text, font=font)
-            text_width = bbox[2] - bbox[0]
-            text_height = bbox[3] - bbox[1]
             position_val = ((width - text_width) // 2, (height - text_height) // 2)
+        elif position.lower() == 'bottom-left':
+            # 左下角
+            position_val = (margin, height - text_height - margin)
         elif position.lower() == 'bottom-right':
             # 右下角
-            # 创建临时draw对象来计算文本尺寸
-            temp_img = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
-            temp_draw = ImageDraw.Draw(temp_img)
-            # 获取文本尺寸 - 使用textbbox替代textsize
-            bbox = temp_draw.textbbox((0, 0), watermark_text, font=font)
-            text_width = bbox[2] - bbox[0]
-            text_height = bbox[3] - bbox[1]
-            position_val = (width - text_width - 10, height - text_height - 10)
+            position_val = (width - text_width - margin, height - text_height - margin)
         else:
             # 默认左上角
             position_val = DEFAULT_WATERMARK_POSITION

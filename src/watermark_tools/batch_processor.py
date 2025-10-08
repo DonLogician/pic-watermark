@@ -5,7 +5,7 @@ def batch_export_images(
     font_size=None,
     color=None,
     watermark_text=None,
-    opacity=None,
+    transparency=None,
     output_format="JPEG",
     output_dir=None,
     prefix="",

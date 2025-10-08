@@ -22,7 +22,7 @@ from PyQt5.QtCore import QSize, Qt
 from src.gui.sidebars.main_sidebar import MainSidebar
 from src.gui.sidebars.export_settings_sidebar import ExportSettingsSidebar
 from src.gui.sidebars.watermark_settings_sidebar import WatermarkSettingsSidebar
-from src.watermark_tools.config import DEFAULT_EXPORT_FORMAT, DEFAULT_WATERMARK_COLOR, DEFAULT_WATERMARK_TEXT, DEFAULT_WATERMARK_TRANSPARENCY
+from src.watermark_tools.config import DEFAULT_EXPORT_FORMAT, DEFAULT_WATERMARK_COLOR, DEFAULT_WATERMARK_TEXT, DEFAULT_WATERMARK_TRANSPARENCY, DEFAULT_FONT_SIZE
 
 
 # 保证DraggableListWidget可用
@@ -102,6 +102,8 @@ class MainWindow(QMainWindow):
         self.watermark_text = DEFAULT_WATERMARK_TEXT
         self.watermark_transparency = DEFAULT_WATERMARK_TRANSPARENCY
         self.watermark_color = DEFAULT_WATERMARK_COLOR
+        self.watermark_font_size = DEFAULT_FONT_SIZE  # 从配置中导入的默认字号
+        self.watermark_position = "center"  # 默认中央位置
         super().__init__()
         self.setWindowTitle("图片水印工具")
         
@@ -110,11 +112,16 @@ class MainWindow(QMainWindow):
         screen_width = desktop.screenGeometry().width()
         screen_height = desktop.screenGeometry().height()
         
-        # 窗口宽度和高度都为屏幕尺寸的70%
+        # 设置窗口宽度和高度为屏幕尺寸的70%
         window_width = int(screen_width * 0.7)
         window_height = int(screen_height * 0.7)
         
+        # 设置窗口的最大尺寸为屏幕尺寸的90%，避免窗口无限制扩大
+        max_width = int(screen_width * 0.9)
+        max_height = int(screen_height * 0.9)
+        
         self.resize(window_width, window_height)
+        self.setMaximumSize(max_width, max_height)
 
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
@@ -149,9 +156,23 @@ class MainWindow(QMainWindow):
         # 水印预览标签
         self.preview_label_watermarked = QLabel("水印预览区")
         self.preview_label_watermarked.setAlignment(Qt.AlignCenter)
-        self.preview_label_watermarked.setSizePolicy(
-            QSizePolicy.Expanding, QSizePolicy.Expanding
-        )
+        
+        # 在初始化时设置预览区的固定大小
+        # 左侧sidebar宽度
+        left_sidebar_width = 300
+        # 右侧sidebar宽度
+        right_sidebar_width = 300
+        # 预留的间隔大小
+        margin = 20
+        
+        # 计算预览区宽度：窗口宽度 - 左侧sidebar宽度 - 右侧sidebar宽度 - 左右边距
+        preview_width = window_width - left_sidebar_width - right_sidebar_width - (margin * 2)
+        # 计算预览区高度：窗口高度 - 上下边距
+        preview_height = window_height - (margin * 2)
+        
+        # 确保预览区尺寸为正数
+        if preview_width > 100 and preview_height > 100:
+            self.preview_label_watermarked.setFixedSize(preview_width, preview_height)
         
         preview_layout.addWidget(self.preview_label_watermarked)
         
@@ -236,13 +257,23 @@ class MainWindow(QMainWindow):
             f"导出设置更新: 格式={format}, 前缀={prefix}, 后缀={suffix}, 路径={export_path}"
         )
 
-    def handle_watermark_settings_change(self, text, transparency, color):
+    def handle_watermark_settings_change(self, text, transparency, color, font_size, position):
         # 处理水印设置的变化
         if text:
             self.watermark_text = text
         self.watermark_transparency = transparency
         self.watermark_color = color
-        print(f"水印设置更新: 内容={self.watermark_text}, 透明度={transparency}, 颜色={color}")
+        self.watermark_font_size = font_size
+        # 将中文位置转换为英文位置参数
+        position_map = {
+            "中央": "center",
+            "左上角": "top-left",
+            "右上角": "top-right",
+            "左下角": "bottom-left",
+            "右下角": "bottom-right"
+        }
+        self.watermark_position = position_map.get(position, "center")
+        print(f"水印设置更新: 内容={self.watermark_text}, 透明度={transparency}, 颜色={color}, 字号={font_size}, 位置={position}")
         # 实时更新预览
         self.show_preview()
 
@@ -299,6 +330,8 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
         if hasattr(self, "export_btn") and self.export_btn:
             self._move_export_btn()
+        
+        # 仅移动导出按钮，不更新预览区大小，避免触发循环
 
     def export_images(self):
         from PyQt5.QtWidgets import QMessageBox
@@ -326,7 +359,7 @@ class MainWindow(QMainWindow):
             suffix=self.export_suffix,
             naming_rule=self.export_naming_rule,
             watermark_text=self.watermark_text,
-            opacity=self.watermark_opacity,
+            transparency=self.watermark_transparency,
             color=self.watermark_color
         )
         if count:
@@ -382,6 +415,8 @@ class MainWindow(QMainWindow):
                 img_path, 
                 self.watermark_text, 
                 tmp_path,
+                position=self.watermark_position,
+                font_size=self.watermark_font_size,
                 color=self.watermark_color,
                 transparency=self.watermark_transparency,
                 extension=self.export_format.lower()
@@ -389,7 +424,7 @@ class MainWindow(QMainWindow):
             if success:
                 pixmap_wm = QPixmap(tmp_path)
                 if not pixmap_wm.isNull():
-                    # 根据预览区域的实际尺寸进行图片缩放
+                    # 使用固定的预览区域尺寸进行图片缩放
                     w = self.preview_label_watermarked.width()
                     h = self.preview_label_watermarked.height()
                     
