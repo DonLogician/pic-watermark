@@ -90,19 +90,19 @@ def add_watermark_to_image(image_path, watermark_text, output_path, position=Non
             x = max(0, min(x, width - text_width))
             y = max(0, min(y, height - text_height))
             position_val = (x, y)
-        elif position is None or position.lower() == 'top-left':
+        elif position is None or (isinstance(position, str) and position.lower() == 'top-left'):
             # 左上角
             position_val = (margin, margin)
-        elif position.lower() == 'top-right':
+        elif isinstance(position, str) and position.lower() == 'top-right':
             # 右上角
             position_val = (width - text_width - margin, margin)
-        elif position.lower() == 'center':
+        elif isinstance(position, str) and position.lower() == 'center':
             # 中央位置
             position_val = ((width - text_width) // 2, (height - text_height) // 2)
-        elif position.lower() == 'bottom-left':
+        elif isinstance(position, str) and position.lower() == 'bottom-left':
             # 左下角
             position_val = (margin, height - text_height - margin)
-        elif position.lower() == 'bottom-right':
+        elif isinstance(position, str) and position.lower() == 'bottom-right':
             # 右下角
             position_val = (width - text_width - margin, height - text_height - margin)
         else:

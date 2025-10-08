@@ -208,6 +208,9 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.sidebar_watermark_settings)
         self.btn_watermark_settings.clicked.connect(self.show_watermark_settings_sidebar)
         self.sidebar_watermark_settings.btn_back.clicked.connect(self.show_main_sidebar)
+        # 连接模板变更信号，用于更新主窗口状态
+        if hasattr(self.sidebar_watermark_settings, 'templates_changed'):
+            self.sidebar_watermark_settings.templates_changed.connect(self.on_templates_changed)
 
         # 导出按钮，主窗口右下角始终显示
         self.export_btn = QPushButton("导出", self)
@@ -224,6 +227,11 @@ class MainWindow(QMainWindow):
         # 连接水印设置信号
         self.sidebar_watermark_settings.watermark_settings_changed.connect(
             self.handle_watermark_settings_change
+        )
+        
+        # 连接水印位置改变信号，用于在拖拽水印时更新侧边栏设置
+        self.preview_label_watermarked.watermark_position_changed.connect(
+            self.handle_watermark_position_change
         )
 
     def handle_export_settings_change(self, format, prefix, suffix, export_path):
@@ -267,19 +275,117 @@ class MainWindow(QMainWindow):
         self.watermark_transparency = transparency
         self.watermark_color = color
         self.watermark_font_size = font_size
-        # 将中文位置转换为英文位置参数
-        position_map = {
-            "中央": "center",
-            "左上角": "top-left",
-            "右上角": "top-right",
-            "左下角": "bottom-left",
-            "右下角": "bottom-right"
-        }
-        # 当用户从下拉菜单选择位置时，更新为预设位置
-        self.watermark_position = position_map.get(position, "center")
+        
+        # 处理位置信息
+        if isinstance(position, str):
+            # 当position是字符串时，可能是预设位置或"自定义(0-1)"
+            if position != "自定义(0-1)":
+                # 将中文位置转换为英文位置参数
+                position_map = {
+                    "中央": "center",
+                    "左上角": "top-left",
+                    "右上角": "top-right",
+                    "左下角": "bottom-left",
+                    "右下角": "bottom-right"
+                }
+                # 当用户从下拉菜单选择位置时，更新为预设位置
+                self.watermark_position = position_map.get(position, "center")
+            # 如果是"自定义(0-1)"，不做处理，保留当前位置
+        elif isinstance(position, tuple) and len(position) == 2:
+            # 当position是元组时，直接设置为精确位置
+            self.watermark_position = position
+        
         print(f"水印设置更新: 内容={self.watermark_text}, 透明度={transparency}, 颜色={color}, 字号={font_size}, 位置={position}")
         # 实时更新预览
         self.show_preview()
+    
+    def handle_watermark_position_change(self, position):
+        """处理水印位置改变的回调函数"""
+        # 更新侧边栏的位置设置
+        if hasattr(self, 'sidebar_watermark_settings'):
+            sidebar = self.sidebar_watermark_settings
+            # 设置下拉菜单为自定义选项
+            custom_index = sidebar.watermark_position_combo.findText("自定义(0-1)")
+            if custom_index >= 0:
+                sidebar.watermark_position_combo.setCurrentIndex(custom_index)
+                # 显示自定义位置输入框
+                if hasattr(sidebar, 'custom_position_widget'):
+                    sidebar.custom_position_widget.setVisible(True)
+                # 设置坐标输入框的值
+                if hasattr(sidebar, 'x_position_input') and hasattr(sidebar, 'y_position_input'):
+                    x, y = position
+                    sidebar.x_position_input.setText(f"{x:.3f}")
+                    sidebar.y_position_input.setText(f"{y:.3f}")
+        
+    def load_last_settings(self):
+        """加载上次的水印设置"""
+        settings = load_last_watermark_settings()
+        if settings:
+            # 更新当前设置
+            if 'text' in settings:
+                self.watermark_text = settings['text']
+            if 'transparency' in settings:
+                self.watermark_transparency = settings['transparency']
+            if 'color' in settings:
+                self.watermark_color = settings['color']
+            if 'font_size' in settings:
+                self.watermark_font_size = settings['font_size']
+            if 'position' in settings:
+                self.watermark_position = settings['position']
+            
+            # 更新水印设置侧边栏的UI
+            if hasattr(self, 'sidebar_watermark_settings'):
+                sidebar = self.sidebar_watermark_settings
+                if hasattr(sidebar, 'watermark_text_edit'):
+                    sidebar.watermark_text_edit.setText(self.watermark_text)
+                if hasattr(sidebar, 'watermark_transparency_input'):
+                    sidebar.watermark_transparency_input.setText(str(self.watermark_transparency))
+                if hasattr(sidebar, 'watermark_transparency_slider'):
+                    sidebar.watermark_transparency_slider.setValue(self.watermark_transparency)
+                if hasattr(sidebar, 'selected_color'):
+                    sidebar.selected_color = self.watermark_color
+                    if hasattr(sidebar, 'color_picker_button'):
+                        sidebar.color_picker_button.setStyleSheet(f"background-color: {sidebar.selected_color};")
+                if hasattr(sidebar, 'font_size_input'):
+                    sidebar.font_size_input.setText(str(self.watermark_font_size))
+                
+                # 查找并设置位置
+                if hasattr(sidebar, 'watermark_position_combo'):
+                    # 检查位置是否为精确坐标（二元组）
+                    if isinstance(self.watermark_position, tuple) and len(self.watermark_position) == 2:
+                        # 对于精确坐标，设置下拉菜单为自定义选项
+                        custom_index = sidebar.watermark_position_combo.findText("自定义(0-1)")
+                        if custom_index >= 0:
+                            sidebar.watermark_position_combo.setCurrentIndex(custom_index)
+                            # 显示自定义位置输入框
+                            if hasattr(sidebar, 'custom_position_widget'):
+                                sidebar.custom_position_widget.setVisible(True)
+                            # 设置坐标输入框的值
+                            if hasattr(sidebar, 'x_position_input') and hasattr(sidebar, 'y_position_input'):
+                                x, y = self.watermark_position
+                                sidebar.x_position_input.setText(f"{x:.3f}")
+                                sidebar.y_position_input.setText(f"{y:.3f}")
+                    else:
+                        # 对于预设位置，正常更新下拉菜单
+                        position_map = {
+                            "center": "中央",
+                            "top-left": "左上角",
+                            "top-right": "右上角",
+                            "bottom-left": "左下角",
+                            "bottom-right": "右下角"
+                        }
+                        position_text = position_map.get(self.watermark_position, "中央")
+                        position_index = sidebar.watermark_position_combo.findText(position_text)
+                        if position_index >= 0:
+                            sidebar.watermark_position_combo.setCurrentIndex(position_index)
+                        # 确保自定义位置输入框隐藏
+                        if hasattr(sidebar, 'custom_position_widget'):
+                            sidebar.custom_position_widget.setVisible(False)
+        
+    def on_templates_changed(self):
+        """模板变更时的回调"""
+        # 这里可以添加额外的处理逻辑，比如更新主窗口的状态等
+        pass
 
     def select_export_path(self):
         folder = QFileDialog.getExistingDirectory(self, "选择导出文件夹", "")
@@ -447,6 +553,7 @@ class MainWindow(QMainWindow):
             self.preview_label_watermarked.setText(f"水印预览出错: {e}")
 
     def closeEvent(self, event):
+        # 清理临时文件夹，但不再保存设置
         clear_tmp_folder()
         super().closeEvent(event)
 

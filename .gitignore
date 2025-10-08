@@ -240,3 +240,6 @@ __marimo__/
 # tmp files
 tmp/
 temp/
+
+# template files
+templates/

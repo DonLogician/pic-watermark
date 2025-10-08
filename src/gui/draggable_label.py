@@ -1,10 +1,13 @@
 from PyQt5.QtWidgets import QLabel
-from PyQt5.QtCore import Qt, QPoint
+from PyQt5.QtCore import Qt, QPoint, pyqtSignal
 
 class DraggableWatermarkLabel(QLabel):
     """
     支持拖拽功能的水印预览标签类
     """
+    # 定义信号，当水印位置改变时发射
+    watermark_position_changed = pyqtSignal(tuple)  # (rel_x, rel_y)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
@@ -13,7 +16,10 @@ class DraggableWatermarkLabel(QLabel):
         self.watermark_offset = QPoint()
         self.setAlignment(Qt.AlignCenter)
         self.setCursor(Qt.OpenHandCursor)
-        
+        self.setAcceptDrops(True)
+        # 用于存储当前水印文本
+        self.current_text = ""
+    
     def mousePressEvent(self, event):
         """
         鼠标按下事件，开始拖拽
@@ -70,9 +76,10 @@ class DraggableWatermarkLabel(QLabel):
                     rel_x = (mouse_x - display_x) / display_width
                     rel_y = (mouse_y - display_y) / display_height
                     
-                    # 设置精确的坐标位置
+                    # 设置精确的坐标位置（转换为元组类型）
                     self.parent.watermark_position = (rel_x, rel_y)
-                    print(f"水印位置已调整: {self.parent.watermark_position}")
+                    # 发射位置改变信号
+                    self.watermark_position_changed.emit((rel_x, rel_y))
                     
                     # 实时更新预览（可选，为了性能可以不更新）
                     # self.parent.show_preview()
@@ -92,3 +99,11 @@ class DraggableWatermarkLabel(QLabel):
             if hasattr(self.parent, 'show_preview'):
                 self.parent.show_preview()
         super().mouseReleaseEvent(event)
+        
+    def setText(self, text):
+        """重写setText方法，保存当前水印文本"""
+        self.current_text = text
+        super().setText(text)
+        # 如果文本为空，清空样式表
+        if not text:
+            self.setStyleSheet("border: 1px solid #ccc;")
