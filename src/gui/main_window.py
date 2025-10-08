@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QDesktopWidget
 )
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import QSize, Qt
@@ -21,6 +22,7 @@ from PyQt5.QtCore import QSize, Qt
 from src.gui.sidebars.main_sidebar import MainSidebar
 from src.gui.sidebars.export_settings_sidebar import ExportSettingsSidebar
 from src.gui.sidebars.watermark_settings_sidebar import WatermarkSettingsSidebar
+from src.watermark_tools.config import DEFAULT_EXPORT_FORMAT, DEFAULT_WATERMARK_COLOR, DEFAULT_WATERMARK_TEXT, DEFAULT_WATERMARK_TRANSPARENCY
 
 
 # 保证DraggableListWidget可用
@@ -95,9 +97,24 @@ class MainWindow(QMainWindow):
         self.image_paths = []
         self.export_path = ""  # 确保初始化
         self.export_naming_rule = 0
+        self.export_format = DEFAULT_EXPORT_FORMAT
+        # 初始化水印设置
+        self.watermark_text = DEFAULT_WATERMARK_TEXT
+        self.watermark_transparency = DEFAULT_WATERMARK_TRANSPARENCY
+        self.watermark_color = DEFAULT_WATERMARK_COLOR
         super().__init__()
         self.setWindowTitle("图片水印工具")
-        self.resize(1200, 900)
+        
+        # 获取屏幕尺寸并设置窗口大小为屏幕的70%×70%
+        desktop = QDesktopWidget()
+        screen_width = desktop.screenGeometry().width()
+        screen_height = desktop.screenGeometry().height()
+        
+        # 窗口宽度和高度都为屏幕尺寸的70%
+        window_width = int(screen_width * 0.7)
+        window_height = int(screen_height * 0.7)
+        
+        self.resize(window_width, window_height)
 
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
@@ -119,27 +136,25 @@ class MainWindow(QMainWindow):
         self.sidebar_main.btn_select_folder.clicked.connect(self.select_folder)
         self.list_widget.itemSelectionChanged.connect(self.show_preview)
 
-        # 中间预览区（上下两部分）
+        # 中间预览区（填充中间空间）
         preview_frame = QWidget()
+        # 设置预览框架的尺寸策略，使其填充可用空间
+        preview_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        preview_frame.setStyleSheet("background:#f5f5f5;border:1px solid #ccc;")
+        
+        # 创建预览布局
         preview_layout = QVBoxLayout(preview_frame)
-        self.preview_label_original = QLabel("原图预览区")
-        self.preview_label_original.setAlignment(Qt.AlignCenter)
-        self.preview_label_original.setStyleSheet(
-            "background:#eee;border:1px solid #ccc;"
-        )
-        self.preview_label_original.setSizePolicy(
-            QSizePolicy.Expanding, QSizePolicy.Expanding
-        )
-        preview_layout.addWidget(self.preview_label_original)
+        preview_layout.setContentsMargins(20, 20, 20, 20)  # 与左右sidebar保持距离
+        
+        # 水印预览标签
         self.preview_label_watermarked = QLabel("水印预览区")
         self.preview_label_watermarked.setAlignment(Qt.AlignCenter)
-        self.preview_label_watermarked.setStyleSheet(
-            "background:#f5f5f5;border:1px solid #ccc;"
-        )
         self.preview_label_watermarked.setSizePolicy(
             QSizePolicy.Expanding, QSizePolicy.Expanding
         )
+        
         preview_layout.addWidget(self.preview_label_watermarked)
+        
         main_layout.addWidget(preview_frame)
 
         # 右侧 sidebar
@@ -221,12 +236,15 @@ class MainWindow(QMainWindow):
             f"导出设置更新: 格式={format}, 前缀={prefix}, 后缀={suffix}, 路径={export_path}"
         )
 
-    def handle_watermark_settings_change(self, text, opacity, color):
+    def handle_watermark_settings_change(self, text, transparency, color):
         # 处理水印设置的变化
-        self.watermark_text = text
-        self.watermark_opacity = opacity
+        if text:
+            self.watermark_text = text
+        self.watermark_transparency = transparency
         self.watermark_color = color
-        print(f"水印设置更新: 内容={text}, 透明度={opacity}, 颜色={color}")
+        print(f"水印设置更新: 内容={self.watermark_text}, 透明度={transparency}, 颜色={color}")
+        # 实时更新预览
+        self.show_preview()
 
     def select_export_path(self):
         folder = QFileDialog.getExistingDirectory(self, "选择导出文件夹", "")
@@ -343,21 +361,10 @@ class MainWindow(QMainWindow):
     def show_preview(self):
         selected = self.list_widget.currentRow()
         if selected < 0 or selected >= len(self.image_paths):
-            self.preview_label_original.clear()
-            self.preview_label_original.setText("原图预览区")
             self.preview_label_watermarked.clear()
             self.preview_label_watermarked.setText("水印预览区")
             return
         img_path = self.image_paths[selected]
-        # 原图预览
-        pixmap = QPixmap(img_path)
-        if not pixmap.isNull():
-            w = self.preview_label_original.width()
-            h = self.preview_label_original.height()
-            scaled = pixmap.scaled(w, h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            self.preview_label_original.setPixmap(scaled)
-        else:
-            self.preview_label_original.setText("无法加载图片")
 
         # 水印预览，文件存储到tmp文件夹
         try:
@@ -376,14 +383,17 @@ class MainWindow(QMainWindow):
                 self.watermark_text, 
                 tmp_path,
                 color=self.watermark_color,
-                transparency=self.watermark_opacity,
+                transparency=self.watermark_transparency,
                 extension=self.export_format.lower()
             )
             if success:
                 pixmap_wm = QPixmap(tmp_path)
                 if not pixmap_wm.isNull():
+                    # 根据预览区域的实际尺寸进行图片缩放
                     w = self.preview_label_watermarked.width()
                     h = self.preview_label_watermarked.height()
+                    
+                    # 确保图片按比例缩放并完全适应预览区域
                     scaled_wm = pixmap_wm.scaled(
                         w, h, Qt.KeepAspectRatio, Qt.SmoothTransformation
                     )

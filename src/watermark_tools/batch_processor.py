@@ -47,7 +47,7 @@ def batch_export_images(
                 color,
                 output_format,
                 watermark_text=watermark_text,
-                opacity=opacity
+                transparency=transparency
             ):
                 success_count += 1
     print(f"批量导出完成，成功处理了 {success_count} 个文件，输出目录: {output_dir}")
@@ -163,7 +163,7 @@ def process_single_file(
     color=None,
     output_format="JPEG",
     watermark_text=None,
-    opacity=None
+    transparency=None
 ):
     """
     处理单个图片文件
@@ -214,7 +214,7 @@ def process_single_file(
             position, 
             font_size, 
             color,
-            transparency=opacity,
+            transparency=transparency,
             extension=extension
         )
     except Exception as e:
